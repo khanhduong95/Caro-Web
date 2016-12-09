@@ -91,4 +91,4 @@ defined('CARO_STANDALONE') OR define('CARO_STANDALONE', true);
 defined('CARO_USER_PATH') OR define('CARO_USER_PATH', 'assets/upload/');
 defined('CARO_AVATAR_MAX') OR define('CARO_AVATAR_MAX', '2048000');
 defined('CARO_COUNTDOWN') OR define('CARO_COUNTDOWN', 20);
-defined('CARO_TIMEOUT') OR define('CARO_TIMEOUT', 21); // Must be bigger than CARO_COUNTDOWN
+defined('CARO_TIMEOUT') OR define('CARO_TIMEOUT', 3);

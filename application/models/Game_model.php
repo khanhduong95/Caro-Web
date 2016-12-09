@@ -56,7 +56,19 @@ Class Game_model extends CI_Model
                 $this->db->select('gameId');
                 if ($this->db->get_where(CARO_DB_PREFIX.'games', array('gameId' => $gameId, 'player1Ready' => 1, 'player2Ready' => 1, 'status' => 1))->num_rows() > 0){
                         if ($this->db->update(CARO_DB_PREFIX.'games', array('status' => 2, 'init_turn' => 1, 'temp_turn' => 1), array('gameId' => $gameId)))
-                                return 1;
+                        {
+                                while (1){
+                                        $query = $this->getGameData($gameId, "countdown, timeout");
+                                        if ($query->num_rows() > 0){
+                                                $timerResult = $query->row_array();
+                                                $timeout = $timerResult['timeout'];
+                                                if ($timeout <= 0)
+                                                        return 0;
+                                        }
+                                        else
+                                                return 0;
+                                }
+                        }
                 }
                 return 0;
         }
@@ -108,6 +120,10 @@ Class Game_model extends CI_Model
                 return 0;
         }
 
+        public function deleteGameData($gameId){
+                return $this->db->delete(CARO_DB_PREFIX.'games', array('gameId' => $gameId));
+        }
+
         public function checkPlayerGameExists($playerId){
                 $this->db->select('player1Id');
                 if ($this->db->get_where(CARO_DB_PREFIX.'games', array('player1Id' => $playerId))->num_rows() > 0)
@@ -121,29 +137,10 @@ Class Game_model extends CI_Model
 
         }
 
-        public function timeout($gameId){
-                $this->db->select('timeout');
-                $query = $this->db->get_where(CARO_DB_PREFIX.'games', array('gameId' => $gameId));
-                if ($query->num_rows() > 0)
-                {
-                        $timeout = $query->row_array()['timeout'];
-                        if ($this->db->update(CARO_DB_PREFIX.'games', array('timeout' => $timeout - 1), array('gameId' => $gameId)))
-                                return $timeout - 1;
-                }
-                return 0;
-
-        }
-
-        public function countdown($gameId){
-                $this->db->select('countdown');
-                $query = $this->db->get_where(CARO_DB_PREFIX.'games', array('gameId' => $gameId));
-                if ($query->num_rows() > 0)
-                {
-                        $countdown = $query->row_array()['countdown'];
-                        if ($this->db->update(CARO_DB_PREFIX.'games', array('countdown' => $countdown - 1), array('gameId' => $gameId)))
-                                return $countdown - 1;
-                }
-                return 0;
-
+        public function updateMove($gameId, $data){
+                if ($this->db->update(CARO_DB_PREFIX.'games', $data, array('gameId' => $gameId)))
+                        return $gameId;
+                else
+                        return 0;
         }
 }
