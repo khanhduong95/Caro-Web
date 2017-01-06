@@ -1,4 +1,22 @@
 <?php
+/*
+ *   Copyright (C) 2016 Dang Duong
+ *
+ *   This file is part of Free Caro Online.
+ *
+ *   Free Caro Online is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Free Caro Online is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU Affero General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with Free Caro Online.  If not, see <http://www.gnu.org/licenses/>.
+ */
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Game extends CI_Controller {
@@ -10,94 +28,115 @@ class Game extends CI_Controller {
                 $this->load->model('Player_model');
         }
 
+        public function index(){
+                echo json_encode(array(
+				       'status' => EXIT_SUCCESS,
+				       'data' => $this->Game_model->getGamesList()
+				       ));
+        }
+
         public function create_game()
         {
-                $playerId = $this->session->userdata('player')['id'];
+                $playerId = $this->session->userdata('player_id');
                 if ($playerId > 0){
                         $gameId = $this->Game_model->createGame($playerId);
                         if ($gameId > 0)
-                                redirect(base_url('index.php/game/display_game/'.$gameId));
+                                echo json_encode(array(
+						       'status' => EXIT_SUCCESS,
+						       'data' => array(
+								       'gameId' => $gameId
+								       )
+						       ));
                         else
-                                redirect(base_url());
+                                echo json_encode(array(
+						       'status' => EXIT_ERROR,
+						       'data' => array(
+								       'errorMessage' => "Error while creating game!"
+								       )
+						       ));
                 }
                 else
-                        redirect(base_url());
+                        echo json_encode(array(
+					       'status' => EXIT_ERROR,
+					       'data' => array(
+							       'errorMessage' => 'You are not logged in!'
+							       )
+					       ));
         }
 
         public function join_game()
         {
-                $playerId = $this->session->userdata('player')['id'];
+                $playerId = $this->session->userdata('player_id');
                 $gameId = $this->input->post('gameId');
                 if ($playerId > 0 && $gameId > 0){
 
                         if ($this->Game_model->joinGame($gameId, $playerId) > 0){
-                                $this->db->select('firstName, lastName');
-                                $query = $this->db->get_where(CARO_DB_PREFIX.'players', array('id' => $playerId));
-                                if ($query->num_rows() > 0){
-                                        $player = $query->row_array();
-                                        echo json_encode(
-                                                array(
-                                                        'playerFirstName' => $player['firstName'],
-                                                        'playerLastName' => $player['lastName']
-                                                )
-                                        );
+                                        echo json_encode(array(
+							       'status' => EXIT_SUCCESS,
+							       'data' => array()
+							       ));
                                 }
                                 else 
-                                        echo "Error while getting player!";
+                                        echo json_encode(array(
+							       'status' => EXIT_ERROR,
+							       'data' => array(
+									       'errorMessage' => "Error while getting player!"
+									       )
+							       ));
                         }
                 }
                 else
-                        echo 0;
+                        echo json_encode(array(
+					       'status' => EXIT_ERROR,
+					       'data' => array(
+							       'errorMessage' => "Game or player is not specified!"
+							       ) 
+					       ));
         }
 
         public function ready_game()
         {
-                $playerId = $this->session->userdata('player')['id'];
+                $playerId = $this->session->userdata('player_id');
                 $gameId = $this->input->post('gameId');
                 if ($playerId > 0 && $gameId > 0){
                         if ($this->Game_model->readyGame($gameId, $playerId) > 0){
                                 $this->Game_model->startGame($gameId);
-                                while (1){
-                                        $countdownResult = $this->countdown();
-                                        if ($countdownResult > 0)
-                                                $this->Game_model->updateGameData(array('temp_turn' => $countdownResult, 'countdown' => 20));
-                                        else 
-                                                break;
-                                }
-                                echo "Game is closed!";
+
+				echo json_encode(array(
+						       'status' => EXIT_SUCCESS,
+						       'data' => array()
+						       ));
                         }
                         else
-                                echo "Error while getting ready!";
+                                echo json_encode(array(
+						       'status' => EXIT_ERROR,
+						       'data' => array(
+								       'errorMessage' => "Error while getting ready!"
+								       )
+						       ));
+
                 }
                 else
-                        echo "Game or Player not specified!";
+                        echo json_encode(array(
+					       'status' => EXIT_ERROR,
+					       'data' => array(
+							       'errorMessage' => "Game or Player not specified!"
+							       )
+					       ));
+
         }
 
         public function quit_game()
         {
-                $playerId = $this->session->userdata('player')['id'];
+                $playerId = $this->session->userdata('player_id');
                 $gameId = $this->input->post('gameId');
-                if ($playerId > 0 && $gameId > 0){
-                        if ($this->Game_model->quitGame($gameId, $playerId) > 0)
-                                echo 1;
-                        else
-                                echo 0;
-                }
-                else
-                        echo 0;
-        }
+                if ($playerId > 0 && $gameId > 0)
+                        $this->Game_model->removePlayer($gameId, $playerId);
 
-        public function display_game($gameId){
-                $gameData = $this->Game_model->getGameData($gameId, "player1Id, player2Id, moves, temp_turn");
-
-                $data['gameId'] = $gameId;
-                $data['player1'] = $this->Player_model->getPlayerById($gameData['player1Id'], "firstName, lastName");
-                $data['player2'] = $this->Player_model->getPlayerById($gameData['player2Id'], "firstName, lastName");
-                $data['moves'] = json_decode($gameData['moves'], true);
-                $data['temp_turn'] = $gameData['temp_turn'];
-                $this->load->view('template/header', $data);
-                $this->load->view('game_view', $data);
-
+		echo json_encode(array(
+				       'status' => EXIT_SUCCESS,
+				       'data' => array()
+				       ));
 
         }
 
@@ -108,50 +147,58 @@ class Game extends CI_Controller {
                 $player2Id = $this->input->post('player2Id');
 
                 $moves = json_encode($this->input->post('moves'));
-                $temp_turn = intval($this->input->post('temp_turn'));
-                $countdown = intval($this->input->post('countdown'));
+                $turn = intval($this->input->post('turn'));
 
                 while (1){
 
-                        $gameData = $this->Game_model->getGameData($gameId, "player1Id, player2Id, moves, temp_turn, countdown");
+                        $gameData = $this->Game_model->getGameData($gameId, "player1Id, player2Id, moves, turn, lastMove");
+
+			$this->Player_model->updatePlayer(array('lastActivity' => date("Y-m-d H:i:s")), $this->session->userdata('player_id'));
 
                         if ($gameData){
 
                                 $changeData = array();                               
                                 $currentTime = date("Y-m-d H:i:s");
 
-                                $player1LastActivity = $this->Player_model->getPlayerById($gameData['player1Id'], "lastActivity");
+				$timeElapsed = strtotime($currentTime) - strtotime($gameData['lastMove']);
+				if ($timeElapsed >= 20){
+					$this->Game_model->updateMove($gameId);
+					$changeData['countdown'] = CARO_COUNTDOWN;
+					exit(json_encode(array(
+							       'status' => EXIT_SUCCESS,
+							       'data' => array()
+							       )));
+				}
+				else if (($timeElapsed % 1) < 0.4){
+					$changeData['countdown'] = intval(CARO_COUNTDOWN - $timeElapsed);
+				}
 
-                                if (!$player1LastActivity || $currentTime - date("Y-m-d H:i:s", strtotime($player1LastActivity['lastActivity']) ) > CARO_TIMEOUT){
-                                        $gameData['player1Id'] = 0;
-                                }
+                                $player1Id = $gameData['player1Id'];
+                                $player1 = $this->Player_model->getPlayerById($player1Id, "name");
 
-                                if ($gameData['player2Id'] > 0){
-                                        $player2LastActivity = $this->Player_model->getPlayerById($gameData['player2Id'], "lastActivity");
-                                        if (!$player2LastActivity || $currentTime - date("Y-m-d H:i:s", strtotime($player2LastActivity['lastActivity']) ) > CARO_TIMEOUT){
-                                                $gameData['player2Id'] = 0;
-                                        }
-                                }
+				$this->Game_model->checkPlayerTimeout($gameId, $player1Id, $player2Id);
 
                                 if ($player1Id != $gameData['player1Id']){
                                         if ($gameData['player1Id'] == 0){
                                                 if ($gameData['player2Id'] == 0){
-                                                        $this->Game_model->deleteGameData($gameId);
-                                                        echo "Game is closed!";
-                                                        exit();
+                                                        $this->Game_model->deleteGame($gameId);
+                                                        exit(json_encode(array(
+									       'status' => EXIT_ERROR,
+									       'data' => array(
+											       'errorMessage' => "Game is closed!"
+											       )
+									       )));
                                                 }
                                                 else {
 
-                                                        $player2Name = $this->Player_model->getPlayerById($gameData['player1Id'], "firstName, lastName");
+                                                        $player2Name = $this->Player_model->getPlayerById($gameData['player1Id'], "name");
                                                         if ($player2Name){
                                                                 $changeData['player1Id'] = $gameData['player2Id'];
-                                                                $changeData['player1FirstName'] = $player2Name['firstName'];
-                                                                $changeData['player1LastName'] = $player2Name['lastName'];
+                                                                $changeData['player1Name'] = $player2Name['name'];
                                                         }
 
                                                         $changeData['player2Id'] = 0;
-                                                        $changeData['player2FirstName'] = "";
-                                                        $changeData['player2LastName'] = "";
+                                                        $changeData['player2Name'] = "";
 
                                                 }
                                         }
@@ -161,21 +208,17 @@ class Game extends CI_Controller {
                                         $changeData['player2Id'] = $gameData['player2Id'];
 
                                         if ($gameData['player2Id'] == 0){
-                                                $changeData['player2FirstName'] = "";
-                                                $changeData['player2LastName'] = "";
-
+                                                $changeData['player2Name'] = "";
                                         }
                                         else {
-                                                $player2Name = $this->Player_model->getPlayerById($gameData['player1Id'], "firstName, lastName");
+                                                $player2Name = $this->Player_model->getPlayerById($gameData['player1Id'], "name");
                                                 if ($player2Name){
-                                                        $changeData['player2FirstName'] = $player2Name['firstName'];
-                                                        $changeData['player2LastName'] = $player2Name['lastName'];
+                                                        $changeData['player2Name'] = $player2Name['name'];
                                                 }
 
                                                 else {
                                                         $changeData['player2Id'] = 0;
-                                                        $changeData['player2FirstName'] = "";
-                                                        $changeData['player2LastName'] = "";
+                                                        $changeData['player2Name'] = "";
                                                 }
 
                                         }
@@ -184,77 +227,57 @@ class Game extends CI_Controller {
                                 else {
                                         if ($gameData['moves'] != $moves)
                                                 $changeData['moves'] = json_decode($gameData['moves']);
-                                        if ($gameData['temp_turn'] != $temp_turn)
-                                                $changeData['temp_turn'] = $gameData['temp_turn'];
-                                        if ($gameData['countdown'] != $countdown)
-                                                $changeData['countdown'] = $gameData['countdown'];
+                                        if ($gameData['turn'] != $turn)
+                                                $changeData['turn'] = $gameData['turn'];
                                 }
 
                                 if (!empty($changeData)){
-                                        echo json_encode($changeData);
-                                        exit();
+                                        exit(json_encode(array(
+							       'status' => EXIT_SUCCESS,
+							       'data' => $changeData
+							       )));
                                 }
 
                         }
 
                         else{
-                                echo "Game is closed!";
-                                exit();
+                                exit(json_encode(array(
+						       'status' => EXIT_ERROR,
+						       'data' => array(
+								       'errorMessage' => "Game is closed!"
+								       )
+						       )));
                         }
                 }
         }
 
-        public function update_move(){
-                $playerId = $this->session->userdata('player')['id'];
-                if ($playerId > 0){
-                        $gameId = $this->input->post('gameId');
-                        $gameData = $this->Game_model->getGameData($gameId, 'player1Id, player2Id, moves, temp_turn, countdown, status');
-                        if ($gameData){
-                                if ($gameData['status'] == 2){
-                                        if (($gameData['player1Id'] == $playerId && $gameData['temp_turn'] == 1) || ($gameData['player2Id'] == $playerId && $gameData['temp_turn'] == 2)){
-                                                $move_x = intval($this->input->post('moveX'));
-                                                $move_y = intval($this->input->post('moveY'));
-                                                $moves = json_decode($gameData['moves']);
-                                                if ($moves[$moveX][$moveY] == 0 && $moveX >= 0 && $moveX < 15 && $moveY >= 0 && $moveY < 15){
-                                                        $moves[$moveX][$moveY] = $gameData['temp_turn'];
-                                                        $newTurn = ($gameData['temp_turn'] == 1) ? 1 : 2;
-                                                        if ($this->Game_model->updateMove($gameId, array('moves' => json_encode($moves), 'temp_turn' => $newTurn)))
-                                                                echo ($newTurn == 2) ? "X" : "O";
-                                                        else
-                                                                echo "Error while making a move!";
-                                                }
-                                        }
+        public function update_move($gameId){
+                $moveX = (intval($this->input->post('move_x'))) ? intval($this->input->post('move_x')) : 0;
+                $moveY = (intval($this->input->post('move_y'))) ? intval($this->input->post('move_y')) : 0;
+		$playerId = $this->session->userdata('player_id');
+		if ($playerId > 0){
+			$result = $this->Game_model->updateMove($gameId, $moveX, $moveY);
+			if ($result)
+				echo json_encode(array(
+						       'status' => EXIT_SUCCESS,
+						       'data' => $result
+						       ));
+			else
+				echo json_encode(array(
+						       'status' => EXIT_ERROR,
+						       'data' => array(
+								       'errorMessage' => 'Error while making a move!'
+								       )
+						       ));
+		}
+		else
+			echo json_encode(array(
+					       'status' => EXIT_ERROR,
+					       'data' => array(
+							       'errorMessage' => 'Error while making a move!'
+							       )
+					       ));
 
-                                }
-
-                        }
-                        else {
-                                echo "Game is closed!";
-                        }
-
-                }
-
-        }
-
-        private function countdown($gameId){
-                $currentTime = date("Y-m-d H:i:s");
-                while (1){
-                        if (date("Y-m-d H:i:s") - $currentTime >= 1){
-                                $currentTime = date("Y-m-d H:i:s");
-                                $gameData = $this->Game_model->getGameData($gameId, 'temp_turn, countdown');
-                                if ($gameData){
-                                        if ($gameData['countdown'] <= 0){
-                                                return ($gameData['temp_turn'] == 1) ? 2 : 1;
-                                        }
-                                        else if ($this->Game_model->updateGameData(array('countdown' => $gameData['countdown'] - 1), $gameId) <= 0){
-                                                return 0;
-                                        }
-                                }
-                                else {
-                                        return 0;
-                                }
-                        }
-                }
         }
 
 }
