@@ -26,112 +26,118 @@ Class Game_model extends CI_Model
                 parent::__construct();
         } 
 
+	public function showGamesList(){
+		$this->db->select("gameId, player1Id, player2Id, player1Wins, player2Wins");
+		return $this->db->get("{CARO_PREFIX}games")->result_array();
+	}
+
         public function createGame($playerId){
-                if ($this->checkPlayerGameExists($playerId) <= 0){
+		$gameId = $this->checkPlayerGameExists($playerId);
+                if ($gameId <= 0){
 
                         $this->db->insert('{CARO_PREFIX}games', array('player1Id' => $playerId));
                         if ($this->db->insert_id())
-                                return $this->db->insert_id();
+                                return intval($this->db->insert_id());
                 }
-                return 0;
+                return $gameId;
         }
 
+        public function getGameData($items, $where, $limit = 1){
+                $this->db->select($items);
+                $this->db->limit($limit);
+
+                $query = $this->db->get_where('{CARO_PREFIX}games', $where);
+                if ($query->num_rows() > 0)
+                        return $query->row_array();
+                return false;
+        }
+
+	public function updateGameData($itemsArray, $where){
+
+		$this->db->update("{CARO_PREFIX}games", $itemsArray, $where);
+		if ($this->db->affected_rows() > 0)
+			return true;
+		return false;
+	}
+
+	public function deleteGame($where){
+		$this->db->delete("{CARO_PREFIX}games", $where);
+	}
+
         public function joinGame($gameId, $playerId){
+		$gameId = intval($gameId);
+		$playerId = intval($playerId);
                 if ($this->checkPlayerGameExists($playerId) <= 0){
-                        if ($this->db->update('{CARO_PREFIX}games', array('player2Id' => $playerId, 'status' => 1), array('gameId' => $gameId, 'player2Id' => 0)))
+                        if ($this->updateGameData(array('player2Id' => $playerId, 'status' => 1), array('gameId' => $gameId, 'player2Id' => 0)))
                                 return $gameId;
                 }
                 return 0;
         }
 
-        public function readyGame($gameId, $playerId){
-                if ($this->checkPlayerGameExists($playerId) <= 0){
-			$this->db->update('{CARO_PREFIX}games', array('player1Ready' => 1), array('gameId' => $gameId, 'player1Id' => $playerId, 'status' => 1));
-			if ($this->db->affected_rows() > 0)
+        public function readyGame($playerId){
+		$gameId = $this->checkPlayerGameExists($playerId);
+                if ($gameId > 0){
+			if ($this->updateGameData(array('player1Ready' => 1), array('gameId' => $gameId, 'player1Id' => $playerId, 'status' => 1)))
 				return $gameId;
-                                
-			$this->db->update('{CARO_PREFIX}games', array('player2Ready' => 1), array('gameId' => $gameId, 'player2Id' => $playerId, 'status' => 1));
-			if ($this->db->affected_rows() > 0)
+			if ($this->updateGameData(array('player2Ready' => 1), array('gameId' => $gameId, 'player2Id' => $playerId, 'status' => 1)))
 				return $gameId;
                 }
                 return 0;
         }
 
         public function startGame($gameId){
+		$gameId = intval($gameId);
 		$matrix = array();
 		for ($i = 0; $i < 15; $i++){
 			$matrix[$i] = array();
 			for ($j = 0; $j < 15; $j++)
 				$matrix[$i][$j] = 0;
 		}
-                $this->db->update('{CARO_PREFIX}games', array('status' => 2, 'moves' => json_encode($matrix)), array('gameId' => $gameId, 'player1Ready' => 1, 'player2Ready' => 1, 'status' => 1));
+                $this->updateGameData(array('status' => 2, 'moves' => json_encode($matrix)), array('gameId' => $gameId, 'player1Ready' => 1, 'player2Ready' => 1, 'status' => 1));
         }
 
         public function removePlayer($gameId, $playerId, $otherPlayerId = 0){
-		$this->db->update('{CARO_PREFIX}games', array('player2Id' => 0, 'player1Ready' => 0, 'player2Ready' => 0, 'turn' => 1, 'status' => 0), array('gameId' => $gameId, 'player2Id' => $playerId));
-		if ($this->db->affected_rows() > 0)
-			exit();
+		$gameId = intval($gameId);
+		$playerId = intval($playerId);
+		$otherPlayerId = intval($otherPlayerId);
+
+		if ($this->updateGameData(array('player2Id' => 0, 'player1Ready' => 0, 'player2Ready' => 0, 'turn' => 1, 'status' => 0), array('gameId' => $gameId, 'player2Id' => $playerId)))
+			return;
 		if ($otherPlayerId <= 0){
-			$this->db->select('player2Id');
-			$query = $this->db->get_where('{CARO_PREFIX}games', array('gameId' => $gameId, 'player1Id' => $playerId));
-			if ($query->num_rows() > 0)
-				$otherPlayerId = $query->row_array()['player2Id'];
+			$otherPlayer = $this->getGameData('player2Id', array('gameId' => $gameId, 'player1Id' => $playerId));
+			if ($otherPlayer)
+				$otherPlayerId = $otherPlayer['player2Id'];
 		}
 		if ($otherPlayerId <= 0)
-			$this->db->delete('{CARO_PREFIX}games', array('gameId' => $gameId, 'player1Id' => $playerId, 'player2Id' => 0));
+			$this->deleteGame(array('gameId' => $gameId, 'player1Id' => $playerId, 'player2Id' => 0));
 		else
-			$this->db->update('{CARO_PREFIX}games', array('player1Id' => $otherPlayerId, 'player2Id' => 0, 'turn' => 1, 'status' => 0), array('gameId' => $gameId, 'player1Id' => $playerId, 'player2Id' => $otherPlayerId));
+			$this->updateGameData(array('player1Id' => $otherPlayerId, 'player2Id' => 0, 'player1Ready' => 0, 'player2Ready' => 0, 'turn' => 1, 'status' => 0), array('gameId' => $gameId, 'player1Id' => $playerId, 'player2Id' => $otherPlayerId));
         }
 
-        public function getGameData($gameId, $items = "*"){
-                $this->db->select($items);
-                $query = $this->db->get_where('{CARO_PREFIX}games', array('gameId' => $gameId));
-                if ($query->num_rows() > 0)
-                        return $query->row_array();
-                return false;
-        }
+        public function updateMove($playerId, $moveX = 0, $moveY = 0){
 
-        public function getGameDataByPlayer($playerId){
-                $this->db->select('player1Id, moves, turn, status');
-                $this->db->limit(1);
-                $this->db->where(array('player1Id' => $playerId));
-                $this->db->or_where(array('player2Id' => $playerId));
-                $query = $this->db->get('{CARO_PREFIX}games');
-                if ($query->num_rows() > 0){
-                        $gameData = $query->row_array();
-                        return array(
-				     'playerOrder' => ($gameData['player1Id'] == $playerId) ? 1 : 2,
-				     'turn' => $gameData['turn'],
-				     'moves' => $gameData['moves'],
-				     'status' => $gameData['status']
-				     );
-                }
-                return false;
-        }
-
-        public function updateMove($gameId, $playerId = 0, $moveX = 0, $moveY = 0){
-
-		$this->db->select('player1Id, player2Id, startTime, lastMove, moves, turn');
-		$query = $this->db->get_where('{CARO_PREFIX}games', array('gameId' => $gameId, 'status' => 2));
-		if ($query->num_rows() <= 0)
+		$gameData = $this->getGameData('gameId, player1Id, player2Id, player1Wins, player2Wins, draws, startTime, lastMove, moves, turn', "player1Id = ".$playerId." OR player2Id = ".$playerId." AND status = 2");
+		if (!$gameData)
 			return false;
-		$gameData = $query->row_array();
-		$turn = $gameData['turn'];
-		if ($playerId <= 0)
-			$playerId = $gameData['player'.$turn.'Id'];
+		$gameId = intval($gameData["gameId"]);
+		$gameData["player1Id"] = intval($gameData["player1Id"]);
+		$gameData["player2Id"] = intval($gameData["player2Id"]);
+		$gameData["turn"] = intval($gameData["turn"]);
+		$turn = $gameData["turn"];
+		$movesJson = $gameData["moves"];
 
-		if ($this->checkPlayerTimeout($gameId, $gameData['player1Id'], $gameData['player2Id']) > 0){
+		if (!$this->checkPlayerTimeout($gameId, $gameData['player1Id'], $gameData['player2Id']))
 			return false;
-		}
 
                 $where = array(
 			       'gameId' => $gameId,
+			       'player'.$turn.'Id' => $playerId,
 			       'turn' => $turn,
 			       'moves' => $movesJson,
-			       'status' => $status
+			       'status' => 2
 			       );
 
-                $moves = json_decode($gameData['moves'], true);
+                $moves = json_decode($movesJson, true);
 
                 if ($moves[$moveX][$moveY] != 0 || $moveX < 0 || $moveX >= 15 || $moveY < 0 || $moveY >= 15){
                         $autoMove = $this->checkEmpty($moves);
@@ -161,66 +167,104 @@ Class Game_model extends CI_Model
 						$emptyCount++;
 				}
 			}
+			if ($winner == 0)
+				$data["draws"] = intval($gameData["draws"]) + 1;
+			else
+				$data["player".$winner."Wins"] = intval($gameData["player".$winner."Wins"]) + 1;
+
+			$data["player1Ready"] = 0;
+			$data["player2Ready"] = 0;
 			$newTurn = (($emptyCount % 2) == 0) ? $newTurn : $turn;
 			$this->db->insert('{CARO_PREFIX}records', array('player1Id' => $gameData['player1Id'], 'player2Id' => $gameData['player2Id'], 'startTime' => $gameData['startTime'], 'endTime' => strtotime(date("Y-m-d H:i:s"))));
 			$data['status'] = 1;
 		}
 
-		$this->db->update('{CARO_PREFIX}games', $data, $where);
+		return $this->updateGameData($data, $where);
 
-		if ($this->db->affected_rows() > 0)
-			return true;
-
-		return false;
 	}
 
 	public function checkPlayerTimeout($gameId, $player1Id, $player2Id){
-		$result = 3;
-
-		$this->db->select('lastActivity');
-		$query1 = $this->db->get_where('{CARO_PREFIX}players', array('playerId' => $player1Id));
-		if ($query1->num_rows() > 0)
-			if (strtotime(date("Y-m-d H:i:s")) - strtotime($query1->row_array()['lastActivity']) < CARO_PLAYER_TIMEOUT)
-				$result -= 1;
-
+		$resultArray = array();
+		$result = 0;
 		if ($player2Id > 0){
-			$this->db->select('lastActivity');
-			$query2 = $this->db->get_where('{CARO_PREFIX}players', array('playerId' => $player2Id));
-			if ($query2->num_rows() > 0)
-				if (strtotime(date("Y-m-d H:i:s")) - strtotime($query2->row_array()['lastActivity']) < CARO_PLAYER_TIMEOUT)
-					$result -= 2;
+			$this->db->select('name, lastActivity');
+			$query = $this->db->get_where('{CARO_PREFIX}players', array('id' => $player2Id));
+			if ($query->num_rows() > 0){
+				$player2 = $query->row_array();
+				if (strtotime(date("Y-m-d H:i:s")) - strtotime($player2['lastActivity']) > CARO_PLAYER_TIMEOUT){
+					$resultArray["player2Id"] = 0;
+					$resultArray["player2Name"] = "";
+					$result += 2;
+					
+				}
+				else {
+					$resultArray["player2Id"] = $player2Id;
+					$resultArray["player2Name"] = $player2['name'];
+				}
+			}
+			else {
+				$resultArray["player2Id"] = 0;
+				$resultArray["player2Name"] = "";
+				$result += 2;
+			}
+			
 		}
+		else {
+			$resultArray["player2Id"] = 0;
+			$resultArray["player2Name"] = "";
+			$result += 2;
+		}
+		$this->db->select('name, lastActivity');
+		$query = $this->db->get_where('{CARO_PREFIX}players', array('id' => $player1Id));
+		if ($query->num_rows() > 0){
+			$player1 = $query->row_array();
+			if (strtotime(date("Y-m-d H:i:s")) - strtotime($player1['lastActivity']) > CARO_PLAYER_TIMEOUT){
+				$resultArray["player1Id"] = $resultArray["player2Id"];
+				$resultArray["player1Name"] = $resultArray["player2Name"];
+				$resultArray["player2Id"] = 0;
+				$resultArray["player2Name"] = "";
+				$result += 1;
+			}
+			else {
+				$resultArray["player1Id"] = $player1Id;
+				$resultArray["player1Name"] = $player1['name'];
+			}
+		}
+		else {
+			$resultArray["player1Id"] = $resultArray["player2Id"];
+			$resultArray["player1Name"] = $resultArray["player2Name"];
+			$resultArray["player2Id"] = 0;
+			$resultArray["player2Name"] = "";
+			$result += 1;
+
+		}
+			
 		if ($result == 1)
 			$this->removePlayer($gameId, $player1Id, $player2Id);
 		else if ($result == 2 && $player2Id > 0)
 			$this->removePlayer($gameId, $player2Id);
-		else if ($result == 3)
-			$this->db->delete('{CARO_PREFIX}games', array('gameId' => $gameId, 'player1Id' => $player1Id, 'player2Id' => $player2Id));
-
-		return $result;
+		else if ($result == 3){
+			$this->deleteGame(array('gameId' => $gameId, 'player1Id' => $player1Id, 'player2Id' => $player2Id));
+			return false;
+		}
+		return $resultArray;
 	}
 
 	private function checkPlayerGameExists($playerId){
-		$this->db->select('gameId');
-		$this->db->limit(1);
-		$queryResult = $this->db->get_where('{CARO_PREFIX}games', "player1Id = ".$playerId." OR player2Id = ".$playerId."")->row_array();
-		if (isset($queryResult))
-			return $queryResult['id'];
-
+		$gameData = $this->getGameData('gameId', "player1Id = ".$playerId." OR player2Id = ".$playerId."");
+		if ($gameData)
+			return intval($gameData['gameId']);
 		return 0;
 	}
 
 	private function checkEmpty($moves){
-		//$moves = json_decode($movesJson, true);
-		if (!empty($moves)){
-			for ($i = 0; $i < 15; $i++){
-				for ($j = 0; $j < 15; $j++){
-					if ($moves[$i][$j] == 0)
-						return array(
-							     'x' => $i,
-							     'y' => $j
-							     );
-				}
+		for ($i = 0; $i < 15; $i++){
+			for ($j = 0; $j < 15; $j++){
+				if ($moves[$i][$j] == 0)
+					return array(
+						     'x' => $i,
+						     'y' => $j
+						     );
 			}
 		}
 		return false;
@@ -228,106 +272,104 @@ Class Game_model extends CI_Model
 
 	private function checkWinner($moves){
 
-		if (!empty($moves)){
-			$emptyCount = 0;
-			for ($i = 0; $i < 15; $i++){
-				for ($j = 0; $j < 15; $j++){
-					$move = $moves[$i][$j];
-					if ($move == 0){
-						$emptyCount++;
+		$emptyCount = 0;
+		for ($i = 0; $i < 15; $i++){
+			for ($j = 0; $j < 15; $j++){
+				$move = $moves[$i][$j];
+				if ($move == 0){
+					$emptyCount++;
+				}
+				else {
+					// horizontal
+					if ($i < 11){
+						if ($moves[$i + 1][$j] == $move && $moves[$i + 2][$j] == $move && $moves[$i + 3][$j] == $move && $moves[$i + 4][$j] == $move){
+							if ($i == 0){
+								if ($moves[$i + 5][$j] != $move)
+									return $move;
+							}
+							else if ($i == 10){
+								if ($moves[$i - 1][$j] != $move)
+									return $move;
+							}
+							else {
+								if ($moves[$i - 1][$j] != $move && $moves[$j + 5][$j] != $move){
+									if ($moves[$i - 1][$j] == 0 || $moves[$j + 5][$j] == 0)
+										return $move;
+								}
+							}
+						}
 					}
-					else {
-						// horizontal
-						if ($i < 11){
-							if ($moves[$i + 1][$j] == $move && $moves[$i + 2][$j] == $move && $moves[$i + 3][$j] == $move && $moves[$i + 4][$j] == $move){
-								if ($i == 0){
-									if ($moves[$i + 5][$j] != $move)
+					// vertical
+					if ($j < 11){
+						if ($moves[$i][$j + 1] == $move && $moves[$i][$j + 2] == $move && $moves[$i][$j + 3] == $move && $moves[$i][$j + 4] == $move){
+							if ($j == 0){
+								if ($moves[$i][$j + 5] != $move)
+									return $move;
+							}
+							else if ($j == 10){
+								if ($moves[$i][$j - 1] != $move)
+									return $move;
+							}
+							else {
+								if ($moves[$i][$j - 1] != $move && $moves[$j][$j + 5] != $move){
+									if ($moves[$i][$j - 1] == 0 || $moves[$j][$j + 5] == 0)
 										return $move;
-								}
-								else if ($i == 10){
-									if ($moves[$i - 1][$j] != $move)
-										return $move;
-								}
-								else {
-									if ($moves[$i - 1][$j] != $move && $moves[$j + 5][$j] != $move){
-										if ($moves[$i - 1][$j] == 0 || $moves[$j + 5][$j] == 0)
-											return $move;
-									}
 								}
 							}
 						}
-						// vertical
-						if ($j < 11){
-							if ($moves[$i][$j + 1] == $move && $moves[$i][$j + 2] == $move && $moves[$i][$j + 3] == $move && $moves[$i][$j + 4] == $move){
-								if ($j == 0){
-									if ($moves[$i][$j + 5] != $move)
+					}
+					// diagonal 1
+					if ($i < 11 && $j < 11){
+						if ($moves[$i + 1][$j + 1] == $move && $moves[$i + 2][$j + 2] == $move && $moves[$i + 3][$j + 3] == $move && $moves[$i + 4][$j + 4] == $move){
+							if ($i == 0){
+								if ($j == 10)
+									return $move;
+								else if ($moves[$i + 5][$j + 5] != $move)
+									return $move;
+							}
+							else if ($i == 10){
+								if ($j == 0)
+									return $move;
+								else if ($moves[$i - 1][$j - 1] != $move)
+									return $move;
+							}
+							else {
+								if ($moves[$i - 1][$j - 1] != $move && $moves[$j + 5][$j + 5] != $move){
+									if ($moves[$i - 1][$j - 1] == 0 || $moves[$j + 5][$j + 5] == 0)
 										return $move;
-								}
-								else if ($j == 10){
-									if ($moves[$i][$j - 1] != $move)
-										return $move;
-								}
-								else {
-									if ($moves[$i][$j - 1] != $move && $moves[$j][$j + 5] != $move){
-										if ($moves[$i][$j - 1] == 0 || $moves[$j][$j + 5] == 0)
-											return $move;
-									}
 								}
 							}
 						}
-						// diagonal 1
-						if ($i < 11 && $j < 11){
-							if ($moves[$i + 1][$j + 1] == $move && $moves[$i + 2][$j + 2] == $move && $moves[$i + 3][$j + 3] == $move && $moves[$i + 4][$j + 4] == $move){
-								if ($i == 0){
-									if ($j == 10)
-										return $move;
-									else if ($moves[$i + 5][$j + 5] != $move)
-										return $move;
-								}
-								else if ($i == 10){
-									if ($j == 0)
-										return $move;
-									else if ($moves[$i - 1][$j - 1] != $move)
-										return $move;
-								}
-								else {
-									if ($moves[$i - 1][$j - 1] != $move && $moves[$j + 5][$j + 5] != $move){
-										if ($moves[$i - 1][$j - 1] == 0 || $moves[$j + 5][$j + 5] == 0)
-											return $move;
-									}
-								}
+					}
+					// diagonal 2
+					if ($i < 11 && $j > 3){
+						if ($moves[$i + 1][$j - 1] == $move && $moves[$i + 2][$j - 2] == $move && $moves[$i + 3][$j - 3] == $move && $moves[$i + 4][$j - 4] == $move){
+							if ($i == 0){
+								if ($j == 4)
+									return $move;
+								else if ($moves[$i + 5][$j - 5] != $move)
+									return $move;
 							}
-						}
-						// diagonal 2
-						if ($i < 11 && $j > 3){
-							if ($moves[$i + 1][$j - 1] == $move && $moves[$i + 2][$j - 2] == $move && $moves[$i + 3][$j - 3] == $move && $moves[$i + 4][$j - 4] == $move){
-								if ($i == 0){
-									if ($j == 4)
+							else if ($i == 10){
+								if ($j == 14)
+									return $move;
+								else if ($moves[$i - 1][$j + 1] != $move)
+									return $move;
+							}
+							else {
+								if ($moves[$i - 1][$j + 1] != $move && $moves[$j + 5][$j - 5] != $move){
+									if ($moves[$i - 1][$j + 1] == 0 || $moves[$j + 5][$j - 5] == 0)
 										return $move;
-									else if ($moves[$i + 5][$j - 5] != $move)
-										return $move;
-								}
-								else if ($i == 10){
-									if ($j == 14)
-										return $move;
-									else if ($moves[$i - 1][$j + 1] != $move)
-										return $move;
-								}
-								else {
-									if ($moves[$i - 1][$j + 1] != $move && $moves[$j + 5][$j - 5] != $move){
-										if ($moves[$i - 1][$j + 1] == 0 || $moves[$j + 5][$j - 5] == 0)
-											return $move;
-									}
 								}
 							}
 						}
 					}
 				}
 			}
-			if ($emptyCount == 0)
-				return 0;
 		}
-		return -1;
+		if ($emptyCount == 0)
+			return 0;
+		return -1;	
 	}
-
+	
 }

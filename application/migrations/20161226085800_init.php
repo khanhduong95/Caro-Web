@@ -148,8 +148,8 @@ class Migration_Init extends CI_Migration {
                 $this->dbforge->add_key('gameId', TRUE);
                 $this->dbforge->create_table('games');
 
-		$this->db->query("ALTER TABLE {CARO_PREFIX}games ADD FOREIGN KEY (player1Id) REFERENCES {CARO_PREFIX}players(id) ON UPDATE CASCADE ON DELETE CASCADE");
-		$this->db->query("ALTER TABLE {CARO_PREFIX}games ADD FOREIGN KEY (player2Id) REFERENCES {CARO_PREFIX}players(id) ON UPDATE CASCADE ON DELETE CASCADE");
+		//$this->db->query("ALTER TABLE {CARO_PREFIX}games ADD FOREIGN KEY (player1Id) REFERENCES {CARO_PREFIX}players(id) ON UPDATE CASCADE ON DELETE CASCADE");
+		//$this->db->query("ALTER TABLE {CARO_PREFIX}games ADD FOREIGN KEY (player2Id) REFERENCES {CARO_PREFIX}players(id) ON UPDATE CASCADE ON DELETE CASCADE");
 
 		$record_fields = array(
 				       'recordId' => array(
@@ -199,8 +199,8 @@ class Migration_Init extends CI_Migration {
                 $this->dbforge->add_key('recordId', TRUE);
                 $this->dbforge->create_table('records');
 
-		$this->db->query("ALTER TABLE {CARO_PREFIX}records ADD FOREIGN KEY (player1Id) REFERENCES {CARO_PREFIX}players(id) ON UPDATE CASCADE ON DELETE CASCADE");
-		$this->db->query("ALTER TABLE {CARO_PREFIX}records ADD FOREIGN KEY (player2Id) REFERENCES {CARO_PREFIX}players(id) ON UPDATE CASCADE ON DELETE CASCADE");
+		//$this->db->query("ALTER TABLE {CARO_PREFIX}records ADD FOREIGN KEY (player1Id) REFERENCES {CARO_PREFIX}players(id) ON UPDATE CASCADE ON DELETE CASCADE");
+		//$this->db->query("ALTER TABLE {CARO_PREFIX}records ADD FOREIGN KEY (player2Id) REFERENCES {CARO_PREFIX}players(id) ON UPDATE CASCADE ON DELETE CASCADE");
 
         }
 

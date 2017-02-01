@@ -86,8 +86,7 @@ defined('EXIT__AUTO_MAX')      OR define('EXIT__AUTO_MAX', 125); // highest auto
 
 /* CUSTOM CONSTANT */
 
-defined('CARO_DB_PREFIX') OR define('CARO_DB_PREFIX', 'caro_web_');
-defined('CARO_USER_PATH') OR define('CARO_USER_PATH', 'assets/upload/');
+defined('CARO_USER_PATH') OR define('CARO_USER_PATH', 'upload/');
 defined('CARO_AVATAR_MAX') OR define('CARO_AVATAR_MAX', '2048000');
 defined('CARO_COUNTDOWN') OR define('CARO_COUNTDOWN', 20);
 defined('CARO_PLAYER_TIMEOUT') OR define('CARO_PLAYER_TIMEOUT', 3);

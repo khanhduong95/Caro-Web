@@ -19,6 +19,26 @@
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
 
+// Allow from any origin
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+        header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+        header('Access-Control-Allow-Credentials: true');
+}
+
+// Access-Control headers are received during OPTIONS requests
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+
+        if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']))
+		header("Access-Control-Allow-Methods: GET, POST, OPTIONS");         
+
+        if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']))
+		header("Access-Control-Allow-Headers:        {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
+
+        exit(0);
+}
+
+header('Content-Type: application/json');
+
 class Player extends CI_Controller {
 
         public function __construct()
@@ -34,9 +54,9 @@ class Player extends CI_Controller {
 
                 if ($playerId > 0)
                         echo json_encode(array(
-                                'status' => EXIT_SUCCESS,
-                                'data' => array()
-                        ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+					       'status' => EXIT_SUCCESS,
+					       'data' => array()
+					       ));
                 else {
                         $this->load->helper(array('cookie', 'form'));
                         $this->load->library('form_validation');
@@ -47,7 +67,7 @@ class Player extends CI_Controller {
                                 $email = $this->input->post('email');
                                 $password = $this->input->post('password');
                                 $player = $this->Player_model->login($email, $password);
-                                if($player){
+                                if ($player){
 
                                         $this->session->set_userdata('player_id', $player['id']);
                                         $this->session->set_userdata('player_name', $player['name']);
@@ -57,36 +77,58 @@ class Player extends CI_Controller {
                                                 $this->input->set_cookie(array('name' => 'password', 'value' => $password, 'expire' => CARO_COOKIE_EXPIRE));
                                         }
                                         echo json_encode(array(
-                                                'status' => EXIT_SUCCESS,
-                                                'data' => array()
-                                        ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+							       'status' => EXIT_SUCCESS,
+							       'data' => array()
+							       ));
 
                                 }
                                 else
                                         echo json_encode(array(
-                                                'status' => EXIT_ERROR,
-                                                'data' => array(
-                                                        'errorMessage' => "Email or password is wrong!"
-                                                )
-                                        ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+							       'status' => EXIT_ERROR,
+							       'data' => array(
+									       'errorMessage' => "Email or password is wrong!"
+									       )
+							       ));
                         }
                         else
                                 echo json_encode(array(
-                                        'status' => EXIT_ERROR,
-                                        'data' => array(
-                                                'errorMessage' => "Enter email or password!"
-                                        )
-                                ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+						       'status' => EXIT_ERROR,
+						       'data' => array(
+								       'errorMessage' => "Email or password is wrong!"
+								       )
+						       ));
 
                 }
         }
 
         public function logout(){
-                $this->session->sess_destroy();;
+                $this->session->sess_destroy();
                 echo json_encode(array(
-                        'status' => EXIT_SUCCESS,
-                        'data' => array()
-                ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+				       'status' => EXIT_SUCCESS,
+				       'data' => array()
+				       ));
+        }
+
+        public function get_session_data(){
+                $playerId = $this->session->userdata('player_id');
+
+                if ($playerId > 0)
+                        echo json_encode(array(
+					       'status' => EXIT_SUCCESS,
+					       'data' => array(
+							       'playerId' => $playerId,
+							       'playerName' => $this->session->userdata('player_name')
+							       )
+					       ));
+
+		else
+                        echo json_encode(array(
+					       'status' => EXIT_ERROR,
+					       'data' => array(
+							       'errorMessage' => "You are not logged in!"
+							       )
+					       ));
+
         }
 
         public function register(){
@@ -94,9 +136,9 @@ class Player extends CI_Controller {
 
                 if ($playerId > 0)
                         echo json_encode(array(
-                                'status' => EXIT_SUCCESS,
-                                'data' => array()
-                        ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+					       'status' => EXIT_SUCCESS,
+					       'data' => array()
+					       ));
 
                 else {
                         $this->load->helper('form');
@@ -124,37 +166,37 @@ class Player extends CI_Controller {
                                         if ($this->Player_model->updatePlayer($inputData) > 0)
 
                                                 echo json_encode(array(
-                                                        'status' => EXIT_SUCCESS,
-                                                        'data' => array()
-                                                ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+								       'status' => EXIT_SUCCESS,
+								       'data' => array()
+								       ));
 
                                         else {
                                                 echo json_encode(array(
-                                                        'status' => EXIT_ERROR,
-                                                        'data' => array(
-                                                                'errorMessage' => "Error occured while registering!"
-                                                        )
-                                                ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+								       'status' => EXIT_ERROR,
+								       'data' => array(
+										       'errorMessage' => "Error occured while registering!"
+										       )
+								       ));
                                         }
 
                                 }
                                 else 
                                         echo json_encode(array(
-                                                'status' => EXIT_ERROR,
-                                                'data' => $data['error']
-                                        ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+							       'status' => EXIT_ERROR,
+							       'data' => $data['error']
+							       ));
                         }
 
                         else {
                                 echo json_encode(array(
-                                        'status' => EXIT_ERROR,
-                                        'data' => array(
-                                                'email' => form_error('email'),
-                                                'name' => form_error('name'),
-                                                'password' => form_error('password'),
-                                                'confirmPassword' => form_error('confirmPassword')
-                                        )
-                                ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+						       'status' => EXIT_ERROR,
+						       'data' => array(
+								       'email' => form_error('email'),
+								       'name' => form_error('name'),
+								       'password' => form_error('password'),
+								       'confirmPassword' => form_error('confirmPassword')
+								       )
+						       ));
                         }
 
                 }
@@ -185,10 +227,10 @@ class Player extends CI_Controller {
                                 }
 
                                 $config = array(
-                                        'upload_path' => CARO_USER_PATH,
-                                        'allowed_types' => "gif|jpg|png|jpeg",
-                                        'max_size' => CARO_AVATAR_MAX,
-                                );
+						'upload_path' => CARO_USER_PATH,
+						'allowed_types' => "gif|jpg|png|jpeg",
+						'max_size' => CARO_AVATAR_MAX,
+						);
 
                                 $this->load->library('upload', $config);
                                 if($this->upload->do_upload('avatar')){
@@ -204,9 +246,9 @@ class Player extends CI_Controller {
                                 if (empty($data['error'])){
                                         if ($this->Player_model->updatePlayer($inputData, $playerId) > 0)
                                                 echo json_encode(array(
-                                                        'status' => EXIT_SUCCESS,
-                                                        'data' => array()
-                                                ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+								       'status' => EXIT_SUCCESS,
+								       'data' => array()
+								       ));
 
                                         else {
 
@@ -214,11 +256,11 @@ class Player extends CI_Controller {
                                                         unlink($avatar);
 
                                                 echo json_encode(array(
-                                                        'status' => EXIT_ERROR,
-                                                        'data' => array(
-                                                                'errorMessage' => "Error occured while updating profiles!"
-                                                        )
-                                                ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+								       'status' => EXIT_ERROR,
+								       'data' => array(
+										       'errorMessage' => "Error occured while updating profiles!"
+										       )
+								       ));
 
                                         }
                                 }
@@ -228,31 +270,31 @@ class Player extends CI_Controller {
                                                 unlink($avatar);
 
                                         echo json_encode(array(
-                                                'status' => EXIT_ERROR,
-                                                'data' => $data['error']
-                                        ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+							       'status' => EXIT_ERROR,
+							       'data' => $data['error']
+							       ));
                                 }
 
                         }
                         else {
                                 echo json_encode(array(
-                                        'status' => EXIT_ERROR,
-                                        'data' => array(
-                                                'email' => form_error('email'),
-                                                'name' => form_error('name')
-                                        )
-                                ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+						       'status' => EXIT_ERROR,
+						       'data' => array(
+								       'email' => form_error('email'),
+								       'name' => form_error('name')
+								       )
+						       ));
 
                         }
 
                 }
                 else 
                         echo json_encode(array(
-                                'status' => EXIT_ERROR,
-                                'data' => array(
-                                        'errorMessage' => "User is not specified!"
-                                )
-                        ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+					       'status' => EXIT_ERROR,
+					       'data' => array(
+							       'errorMessage' => "User is not specified!"
+							       )
+					       ));
 
         }
 }
