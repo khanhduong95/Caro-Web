@@ -167,10 +167,7 @@ Class Game_model extends CI_Model
 						$emptyCount++;
 				}
 			}
-			if ($winner == 0)
-				$data["draws"] = intval($gameData["draws"]) + 1;
-			else
-				$data["player".$winner."Wins"] = intval($gameData["player".$winner."Wins"]) + 1;
+			$data = array_merge($data, $this->updateGameResult($gameData['player1Id'], $gameData['player2Id'], $gameData['startTime'], $winner, $gameData["player".$winner."Wins"], $gameData["draws"]));
 
 			$data["player1Ready"] = 0;
 			$data["player2Ready"] = 0;
@@ -370,6 +367,32 @@ Class Game_model extends CI_Model
 		if ($emptyCount == 0)
 			return 0;
 		return -1;	
+	}
+
+	private function updateGameResult($player1Id, $player2Id, $startTime, $winner, $winnerWins, $draws){
+		$this->db->insert('{CARO_PREFIX}records', array('player1Id' => $player1Id, 'player2Id' => $player2Id, 'winner' => $winner, 'startTime' => $startTime, 'endTime' => strtotime(date("Y-m-d H:i:s"))));
+		if ($winner == 0){
+			$this->db->set("draws", "draws + 1", False);
+			$this->db->set("played", "played + 1", False);
+			$this->db->where("id", $player1Id);
+			$this->db->or_where("id", $player2Id);
+			$this->db->update('{CARO_PREFIX}players');
+			return array(
+				     'draws' => $draws + 1
+				     );
+		}
+		else{
+			$this->db->set("wins", "wins + 1", False);
+			$this->db->where("id", $winner);
+			$this->db->update('{CARO_PREFIX}players');
+			$this->db->set("played", "played + 1", False);
+			$this->db->where("id", $player1Id);
+			$this->db->or_where("id", $player2Id);
+			$this->db->update('{CARO_PREFIX}players');
+			return array(
+				     'player'.$winner.'Wins' => $winnerWins + 1
+				     );
+		}
 	}
 	
 }

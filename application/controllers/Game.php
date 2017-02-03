@@ -182,7 +182,6 @@ class Game extends CI_Controller {
 				       'status' => EXIT_SUCCESS,
 				       'data' => array()
 				       ));
-
         }
 
         public function refresh_game($gameId = 0, $player1Id = 0, $player2Id = 0, $status = 0, $turn = 0){
@@ -198,12 +197,7 @@ class Game extends CI_Controller {
 		$player2Id = intval($player2Id);
 		$status = intval($status);
 		$turn = intval($turn);
-                //$player1Id = intval($this->input->post('player1Id'));
-                //$player2Id = intval($this->input->post('player2Id'));
-                //$status = intval($this->input->post('status'));
-
                 $moves = json_encode($this->input->post('moves'));
-                //$turn = intval($this->input->post('turn'));
 
                 while (1){
 
