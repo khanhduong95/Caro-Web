@@ -10,6 +10,8 @@ The game is written in PHP using the web framework CodeIgniter.
 
 # Instructions
 
+Read INSTALL file for installation instructions
+
 The game rule is simple: A player who has 5 (and exactly 5) continuous vertical, horizontal or diagonal pieces with head or tail of the row not being blocked by the opponent wins.
 
 # License
