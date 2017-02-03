@@ -1,0 +1,6 @@
+Installation Instructions
+
+- Make sure you have web server (Apache, etc.), database (MySQL/MariaDB, etc.) and PHP installed
+- Download CodeIgniter Web Framework ( http://www.codeigniter.com ), 3.x and later versions recommended (version 3.1.0 is already tested)
+- Check the application/config folder in the game directory and edit config files
+- Copy and paste the application folder from the game directory to the framework directory (merge the existing application folder in the framework directory)
